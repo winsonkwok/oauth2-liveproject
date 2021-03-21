@@ -1,0 +1,6 @@
+server:
+  port: 7000
+asymmetric:
+  password: myssiapassword
+  privateKey: ssia.jks
+  alias: ssia
