@@ -4,11 +4,11 @@ Implement using OAuth2 Library of Spring Cloud version Hoxton.SR10
 
 Listen on port 7000
 
-# Private Key
+### Private Key
 
 keytool command
 
-# Public Key
+### Public Key
 
 override configure(AuthorizationServerSecurityConfigurer security) method so that 
 
