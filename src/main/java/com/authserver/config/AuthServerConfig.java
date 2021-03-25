@@ -67,9 +67,13 @@ public class AuthServerConfig extends AuthorizationServerConfigurerAdapter {
                 .withClient("client")
                 .secret(passwordEncoder.encode("secret"))
                 .authorizedGrantTypes("authorization_code", "password", "refresh_token")
+                .autoApprove(true)
                 .scopes("read")
+                .redirectUris("http://localhost:7000/home")
                 .and()
                 .withClient("resourceserver")
                 .secret(passwordEncoder.encode("resourceserversecret"));
     }
+
+
 }
