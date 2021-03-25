@@ -1,5 +1,7 @@
 package com.authserver;
 
+import org.codehaus.jackson.map.ObjectMapper;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -7,8 +9,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -21,9 +26,9 @@ class AuthServerApplicationTests {
     private MockMvc mvc;
 
     /*
-     * this was will test password grant type (implicit flow)
+     * test password grant type (implicit flow)
      * the client send password grant_type to authorization server
-     * in return authorization server will return access token
+     * in return of access token from authorization server
      * currently no PKCE support
      */
     @Test
@@ -40,9 +45,11 @@ class AuthServerApplicationTests {
     }
 
     /*
-     * this was will test authorization_code grant type
+     * test authorization_code grant type
      * the client send to authorize endpoint with client name
-     * in return authorization server will return authorization code
+     * in return authorization code from authorization server
+     * using the authorization code to exchange for access token
+     *
      */
     @Test
     void generateAuthorizationCodeFlowWithValidUserAndClientTest() throws Exception {
@@ -66,7 +73,10 @@ class AuthServerApplicationTests {
                 .andExpect(status().isOk());
     }
 
-
+    /*
+     * Test Invalid Client Password
+     * Expected Unauthorized Response
+     */
     @Test
     void generateAuthorizationOnceWithInValidUser() throws Exception {
         mvc.perform(
@@ -77,4 +87,36 @@ class AuthServerApplicationTests {
                         .queryParam("scope", "read"))
                 .andExpect(status().isUnauthorized()).andReturn();
     }
+
+    /*
+     * Refresh Token Test
+     * Use password grant type to get access token and refresh token
+     * Get new access token from the refresh token
+     * The access token should be different from original access token
+     *
+     *
+     */
+    @Test
+    void refreshTokenValidUserAndClientTest() throws Exception {
+        MvcResult initialResult =  mvc.perform(
+                post("/oauth/token")
+                        .with(httpBasic("client", "secret"))
+                        .queryParam("grant_type", "password")
+                        .queryParam("username", "john")
+                        .queryParam("password", "12345")
+                        .queryParam("scope", "read"))
+                .andExpect(jsonPath("$.access_token").exists())
+                .andExpect(status().isOk()).andReturn();
+        String initialContent = initialResult.getResponse().getContentAsString();
+        Map<String, String> initialMap = new ObjectMapper().readValue(initialContent, HashMap.class);
+        String refresh_token = initialMap.get("refresh_token");
+        mvc.perform(
+                post("/oauth/token")
+                        .with(httpBasic("client", "secret"))
+                        .queryParam("grant_type", "refresh_token")
+                        .queryParam("refresh_token", refresh_token))
+                   .andExpect(jsonPath("$.access_token").exists())
+                   .andExpect(status().isOk()).andReturn();
+    }
+
 }

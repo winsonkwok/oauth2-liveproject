@@ -6,16 +6,23 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.core.userdetails.UserDetailsByNameServiceWrapper;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.config.annotation.configurers.ClientDetailsServiceConfigurer;
 import org.springframework.security.oauth2.config.annotation.web.configuration.AuthorizationServerConfigurerAdapter;
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableAuthorizationServer;
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerEndpointsConfigurer;
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerSecurityConfigurer;
+import org.springframework.security.oauth2.provider.token.DefaultTokenServices;
 import org.springframework.security.oauth2.provider.token.TokenStore;
 import org.springframework.security.oauth2.provider.token.store.JwtAccessTokenConverter;
 import org.springframework.security.oauth2.provider.token.store.JwtTokenStore;
 import org.springframework.security.oauth2.provider.token.store.KeyStoreKeyFactory;
+import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider;
+
+import java.util.Arrays;
 
 @Configuration
 @EnableAuthorizationServer
@@ -39,7 +46,28 @@ public class AuthServerConfig extends AuthorizationServerConfigurerAdapter {
     public void configure(AuthorizationServerEndpointsConfigurer endpoints) {
         endpoints.authenticationManager(authenticationManager)
                 .tokenStore(tokenStore())
-                .accessTokenConverter(jwtAccessTokenConverter());
+                .accessTokenConverter(jwtAccessTokenConverter())
+                .tokenEnhancer(jwtAccessTokenConverter())
+                .tokenServices(createTokenService(endpoints, authenticationManager));
+    }
+
+    private DefaultTokenServices createTokenService(AuthorizationServerEndpointsConfigurer endpoints, AuthenticationManager authenticationManager) {
+        DefaultTokenServices tokenServices = new DefaultTokenServices();
+        tokenServices.setSupportRefreshToken(true);
+        tokenServices.setTokenStore(endpoints.getTokenStore());
+        tokenServices.setClientDetailsService(endpoints.getClientDetailsService());
+        tokenServices.setAuthenticationManager(createPreAuthProvider());
+        tokenServices.setTokenEnhancer(endpoints.getTokenEnhancer());
+        return tokenServices;
+    }
+
+    @Autowired
+    UserDetailsService userDetailsService;
+
+    private AuthenticationManager createPreAuthProvider() {
+        PreAuthenticatedAuthenticationProvider provider = new PreAuthenticatedAuthenticationProvider();
+        provider.setPreAuthenticatedUserDetailsService(new UserDetailsByNameServiceWrapper<>(userDetailsService));
+        return new ProviderManager(Arrays.asList(provider));
     }
 
     @Override
