@@ -1,6 +1,6 @@
 ## Authorization Server
 
-Implement using OAuth2 Library of Spring Cloud version Hoxton.SR10
+OAuth2 Library of Spring Cloud version Hoxton.SR10
 
 Listen on port 7000
 
